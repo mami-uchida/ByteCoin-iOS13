@@ -29,33 +29,35 @@ struct CoinManager {
         if let url = URL(string: urlString) {
             let session = URLSession(configuration: .default)
             let task = session.dataTask(with: url){ (data, response, error) in
-                if error != nil {
-                    self.delegate?.didFailWithError(error: error!)
+                //errorの強制アンラップを避ける
+                if let error = error {
+                    delegate?.didFailWithError(error: error)
                     return
                 }
-                if let safeData = data {
-                    if let bitcoinPrice = self.parseJSON(safeData) {
-                        let priceString = String(format: "%.2f", bitcoinPrice)
-                        self.delegate?.didUpdataPrice(price: priceString, currency: currency)
-                    }
-                }
+                //guard else文には複数の条件を記載
+                guard let safeData = data, let bitcoinPrice = parseJSON(safeData) else { return }
+                let priceString = String(format: "%.2f", bitcoinPrice)
+                self.delegate?.didUpdataPrice(price: priceString, currency: currency)
+                
             }
             task.resume()
         }
     }
-    
-    
-    //取得したJSONデータをswiftオブジェクトに変換（CoinData構造体も合わせて作成）
-    func parseJSON(_ data: Data) -> Double? {
-        let decoder = JSONDecoder()
-        do {
-            let decodedData = try decoder.decode(CoinData.self, from: data)
-            let lastPrice = decodedData.rate
-            return lastPrice
-        } catch {
-            delegate?.didFailWithError(error:error)
-            return nil
+        
+        
+        
+        
+        //取得したJSONデータをswiftオブジェクトに変換（CoinData構造体も合わせて作成）
+        func parseJSON(_ data: Data) -> Double? {
+            let decoder = JSONDecoder()
+            do {
+                let decodedData = try decoder.decode(CoinData.self, from: data)
+                let lastPrice = decodedData.rate
+                return lastPrice
+            } catch {
+                delegate?.didFailWithError(error:error)
+                return nil
+            }
         }
+        
     }
-    
-}
